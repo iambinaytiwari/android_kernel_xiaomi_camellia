@@ -282,7 +282,9 @@ static int vdec_decode(unsigned long h_vdec, struct mtk_vcodec_mem *bs,
 	data[0] = (unsigned int)bs->size;
 	data[1] = (unsigned int)bs->length;
 	data[2] = (unsigned int)bs->flags;
-	ret = vcu_dec_start(vcu, data, 3, bs, fb);
+        struct mtk_vcodec_mem actual_bs;
+        struct vdec_fb actual_fb;
+        ret = vcu_dec_start(vcu, data, 3, &actual_bs, &actual_fb);
 
 	*src_chg = inst->vsi->dec.vdec_changed_info;
 	*(errormap_info + bs->index % VB2_MAX_FRAME) =
