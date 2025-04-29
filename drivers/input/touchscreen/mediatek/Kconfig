@@ -68,6 +68,19 @@ config TOUCHSCREEN_MTK_GT1151
 
 source "drivers/input/touchscreen/mediatek/GT1151/Kconfig"
 
+config TOUCHSCREEN_FTS_FT8722
+	bool "FT8722 for Mediatek package"
+	default n
+	help
+	  Say Y here if you have FT8722 touch panel.
+
+	  If unsure, say N.
+
+	  To compile this dirver as a module, choose M here: the
+	  module will be called.
+
+source "drivers/input/touchscreen/mediatek/FT8722/Kconfig"
+
 config TOUCHSCREEN_MTK_GSLX680
 	bool "gslX680 for Mediatek package"
 	help
