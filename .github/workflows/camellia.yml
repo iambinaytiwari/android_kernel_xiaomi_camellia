@@ -1,0 +1,98 @@
+name: camellia
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * 6'
+  push:
+    branches:
+      - stable
+  pull_request:
+    branches:
+      - stable
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      CCACHE_COMPILERCHECK: "%compiler% -dumpmachine; %compiler% -dumpversion"
+      CCACHE_NOHASHDIR: "true"
+      CCACHE_MAXSIZE: "2G"
+      CCACHE_HARDLINK: "true"
+      KERNEL_DEFCONFIG: "camellia_defconfig"
+      KERNEL_CMDLINE: "ARCH=arm64 CC=clang HOSTCC=clang DTC=dtc CLANG_TRIPLE=aarch64-linux-gnu- CROSS_COMPILE=aarch64-linux-gnu- O=out"
+
+    steps:
+      # Checkout the repository and switch to the branch specified in the matrix
+      - name: Checkout Repository
+        uses: actions/checkout@v4.2.2
+
+      # Set up ccache for build optimization
+      - name: Set up ccache
+        uses: hendrikmuhs/ccache-action@v1.2.10
+
+      # Install dependencies
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt install gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi binutils make python3 ccache libssl-dev build-essential bc bison flex unzip libssl-dev ca-certificates xz-utils mkbootimg cpio device-tree-compiler git git-lfs jq -y
+          curl -Lsq https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r547379.tar.gz -o clang.tar.gz
+          mkdir clang
+          tar -xzvf clang.tar.gz -C clang
+
+      # Get current timestamp
+      - name: Get Time
+        id: get_time
+        run: echo "TIME=$(TZ=UTC-8 date +%m%d%H%M)" >> $GITHUB_ENV
+
+      # Setup environment for kernel compilation
+      - name: Setup Environment For Kernel
+        run: |
+          export PATH=$(pwd)/clang/bin/:$PATH
+          export ARCH=arm64
+          export CC=clang
+          export HOSTCC=clang
+          export DTC=dtc
+          export CLANG_TRIPLE=aarch64-linux-gnu-
+          export CROSS_COMPILE=aarch64-linux-gnu-
+          export KBUILD_BUILD_USER="${{ github.actor }}"
+
+      # Start kernel build
+      - name: Start Build Kernel
+        run: |
+          make $KERNEL_CMDLINE $KERNEL_DEFCONFIG CC="ccache clang"
+          make $KERNEL_CMDLINE CC="ccache clang" -j$(nproc --all) | tee build.log 
+
+      # Pack kernel into AnyKernel3 zip
+      - name: Pack Kernel Image In AnyKernel3
+        run: |
+          git clone --depth=1 https://github.com/osm0sis/AnyKernel3 -b master AnyKernel3 && rm -rf AnyKernel3/.git AnyKernel3/.github AnyKernel3/LICENSE AnyKernel3/README.md
+          rm -rf out/AnyKernel3
+          cp -r AnyKernel3 out/
+          cp out/arch/arm64/boot/Image out/AnyKernel3/Image
+          if [ -f out/arch/arm64/boot/dts/mediatek/camellia.dtb ]; then
+            cp out/arch/arm64/boot/dts/mediatek/camellia.dtb out/AnyKernel3/dtb
+          fi
+          cd out/AnyKernel3
+          zip -r9 Camellia-${{ env.FILE_TAG }}-"$(/bin/date -u '+%Y%m%d-%H%M')".zip .
+
+      # Release kernel to GitHub
+      - name: Release Kernel TO GitHub
+        uses: marvinpinto/action-automatic-releases@latest
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          title: ${{ env.FILE_TAG }}
+          automatic_release_tag: ${{ env.FILE_TAG }}
+          prerelease: false
+          files: |
+            out/AnyKernel3/*.zip
+            build.log
+            out/arch/arm64/boot/Image.gz
+
+      # Upload kernel artifacts
+      - name: Upload Kernel Artifacts
+        uses: actions/upload-artifact@v4.0.0
+        with:
+          name: Kernel_Output_${{ matrix.kernelsu_version.version }}
+          path: |
+            out/arch
