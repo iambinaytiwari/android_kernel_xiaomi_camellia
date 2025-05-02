@@ -20,23 +20,19 @@ jobs:
       CCACHE_MAXSIZE: "2G"
       CCACHE_HARDLINK: "true"
       KERNEL_DEFCONFIG: "camellia_defconfig"
-      KERNEL_CMDLINE: "ARCH=arm64 CC=clang HOSTCC=clang DTC=dtc CLANG_TRIPLE=aarch64-linux-gnu- CROSS_COMPILE=aarch64-linux-gnu- O=out"
+      KERNEL_CMDLINE: "ARCH=arm64 CC=clang CLANG_TRIPLE=aarch64-linux-gnu- CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- O=out"
 
     steps:
       # Checkout the repository and switch to the branch specified in the matrix
       - name: Checkout Repository
         uses: actions/checkout@v4.2.2
 
-      # Set up ccache for build optimization
-      - name: Set up ccache
-        uses: hendrikmuhs/ccache-action@v1.2.10
-
       # Install dependencies
       - name: Install dependencies
         run: |
           sudo apt-get update -y
           sudo apt install gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi binutils make python3 ccache libssl-dev build-essential bc bison flex unzip libssl-dev ca-certificates xz-utils mkbootimg cpio device-tree-compiler git git-lfs jq -y
-          curl -Lsq https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r547379.tar.gz -o clang.tar.gz
+          curl -Ls $(curl -s https://api.github.com/repos/ZyCromerZ/Clang/releases/latest | grep "browser_download_url" | cut -d '"' -f 4) -o clang.tar.gz
           mkdir clang
           tar -xzvf clang.tar.gz -C clang
 
@@ -51,10 +47,12 @@ jobs:
           export PATH=$(pwd)/clang/bin/:$PATH
           export ARCH=arm64
           export CC=clang
-          export HOSTCC=clang
-          export DTC=dtc
           export CLANG_TRIPLE=aarch64-linux-gnu-
           export CROSS_COMPILE=aarch64-linux-gnu-
+          export CROSS_COMPILE_ARM32=arm-linux-gnueabi-
+          export SUBARCH=arm64
+          export ANDROID_MAJOR_VERSION=r
+          export KCFLAGS=-w
           export KBUILD_BUILD_USER="${{ github.actor }}"
 
       # Start kernel build
