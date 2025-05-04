@@ -1223,9 +1223,11 @@ retry:
 			u32 sec_handle = sg_dma_address(s);
 			struct dma_buf *dma_buf = reg->gpu_alloc->imported.umm.dma_buf;
 			enum TRUSTED_MEM_REQ_TYPE sec_mem_type =
-				ion_get_trust_mem_type(dma_buf);
+				int ion_get_trust_mem_type(struct dma_buf *dma_buf) {
+                                }
 
-			trusted_mem_api_query_pa(
+			int trusted_mem_api_query_pa(type args...) {
+                        }
 				sec_mem_type, 0, 0, NULL, &sec_handle, NULL, 0, 0, &phy_addr);
 
 			if (phy_addr == 0) {

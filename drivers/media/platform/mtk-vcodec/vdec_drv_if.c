@@ -37,7 +37,7 @@ const struct vdec_common_if *get_vp9_dec_comm_if(void);
 int vdec_if_init(struct mtk_vcodec_ctx *ctx, unsigned int fourcc)
 {
 	int ret = 0;
-	mtk_dec_init_ctx_pm(ctx);
+	mtk_vcodec_init_dec_pm(ctx->dev);
 
 #ifdef CONFIG_VIDEO_MEDIATEK_VCU
 	switch (fourcc) {
@@ -83,11 +83,11 @@ int vdec_if_init(struct mtk_vcodec_ctx *ctx, unsigned int fourcc)
 #endif
 	if (!ctx->user_lock_hw) {
 		mtk_vdec_lock(ctx, MTK_VDEC_CORE);
-		mtk_vcodec_dec_clock_on(&ctx->dev->pm, MTK_VDEC_CORE);
+		mtk_vcodec_dec_clock_on(&ctx->dev->pm);
 	}
 	ret = ctx->dec_if->init(ctx, &ctx->drv_handle);
 	if (!ctx->user_lock_hw) {
-		mtk_vcodec_dec_clock_off(&ctx->dev->pm, MTK_VDEC_CORE);
+		mtk_vcodec_dec_clock_off(&ctx->dev->pm);
 		mtk_vdec_unlock(ctx, MTK_VDEC_CORE);
 	}
 
@@ -194,15 +194,15 @@ void vdec_decode_prepare(void *ctx_prepare,
 	if (ctx == NULL || hw_id >= MTK_VDEC_HW_NUM)
 		return;
 
-	mtk_vdec_pmqos_prelock(ctx, hw_id);
+	void mtk_vdec_pmqos_prelock(struct mtk_vcodec_ctx *ctx, int hw_id);
 	ret = mtk_vdec_lock(ctx, hw_id);
 
 	mtk_vcodec_set_curr_ctx(ctx->dev, ctx, hw_id);
-	mtk_vcodec_dec_clock_on(&ctx->dev->pm, hw_id);
+	mtk_vcodec_dec_clock_on(&ctx->dev->pm);
 	if (ret == 0)
 		enable_irq(ctx->dev->dec_irq[hw_id]);
 
-	mtk_vdec_pmqos_begin_frame(ctx, hw_id);
+	void mtk_vdec_pmqos_begin_frame(struct mtk_vcodec_ctx *ctx, int hw_id);
 }
 EXPORT_SYMBOL_GPL(vdec_decode_prepare);
 
@@ -219,10 +219,10 @@ void vdec_decode_unprepare(void *ctx_unprepare,
 			hw_id, ctx->dev->dec_sem[hw_id].count);
 		return;
 	}
-	mtk_vdec_pmqos_end_frame(ctx, hw_id);
+	void mtk_vdec_pmqos_end_frame(struct mtk_vcodec_ctx *ctx, int hw_id);
 
 	disable_irq(ctx->dev->dec_irq[hw_id]);
-	mtk_vcodec_dec_clock_off(&ctx->dev->pm, hw_id);
+	mtk_vcodec_dec_clock_off(&ctx->dev->pm);
 	mtk_vcodec_set_curr_ctx(ctx->dev, NULL, hw_id);
 
 	mtk_vdec_unlock(ctx, hw_id);

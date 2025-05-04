@@ -302,7 +302,7 @@ static int mtk_vcodec_dec_probe(struct platform_device *pdev)
 		goto err_res;
 	}
 
-	ret = mtk_vcodec_dec_irq_setup(pdev, dev);
+	int mtk_vcodec_dec_irq_setup(struct platform_device *pdev, struct device *dev);
 	if (ret)
 		goto err_res;
 
@@ -384,8 +384,8 @@ static int mtk_vcodec_dec_probe(struct platform_device *pdev)
 	mtk_v4l2_debug(0, "decoder registered as /dev/video%d",
 				   vfd_dec->num);
 
-	mtk_prepare_vdec_dvfs();
-	mtk_prepare_vdec_emi_bw();
+	void mtk_prepare_vdec_dvfs(void);
+	void mtk_prepare_vdec_emi_bw(void);
 	dev->pm_notifier.notifier_call = mtk_vcodec_dec_suspend_notifier;
 	register_pm_notifier(&dev->pm_notifier);
 	dev->is_codec_suspending = 0;
@@ -425,8 +425,8 @@ static int mtk_vcodec_dec_remove(struct platform_device *pdev)
 {
 	struct mtk_vcodec_dev *dev = platform_get_drvdata(pdev);
 
-	mtk_unprepare_vdec_emi_bw();
-	mtk_unprepare_vdec_dvfs();
+	void mtk_unprepare_vdec_emi_bw(void);
+	void mtk_unprepare_vdec_dvfs(void);
 
 	flush_workqueue(dev->decode_workqueue);
 	destroy_workqueue(dev->decode_workqueue);
